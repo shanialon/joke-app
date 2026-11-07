@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>בדיחה בלחיצה</title>
+  <meta name="description" content="כותבים נושא, לוחצים, וצוחקים.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Playpen+Sans+Hebrew:wght@500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --sun: #FFE15A;
+      --paper: #FFFFFF;
+      --ink: #2B1E4A;
+      --ink-soft: #4A3D6B;
+      --red: #F23D2F;
+      --blue: #2E9BFF;
+      --hint: #756B92;
+      --ui-font: "Fredoka", system-ui, sans-serif;
+      --joke-font: "Playpen Sans Hebrew", "Fredoka", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      background-color: var(--sun);
+      background-image: url("assets/bg-doodles.svg"), url("assets/bg-dots.svg");
+      background-repeat: no-repeat, repeat;
+      background-position: top center, 0 0;
+      background-size: 440px auto, 16px 16px;
+      color: var(--ink);
+      font-family: var(--ui-font);
+      font-weight: 500;
+    }
+
+    .app {
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 22px 18px 18px;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .logo {
+      display: block;
+      width: 300px;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto;
+    }
+
+    .intro {
+      margin: 0;
+      text-align: center;
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.4;
+      color: var(--ink-soft);
+    }
+
+    form { display: flex; flex-direction: column; gap: 14px; }
+
+    .field { display: flex; flex-direction: column; gap: 8px; }
+
+    label {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 14px 18px;
+      font: 500 19px var(--ui-font);
+      color: var(--ink);
+      background: var(--paper);
+      border: 3px solid var(--ink);
+      border-radius: 18px;
+      box-shadow: 4px 4px 0 var(--ink);
+      transform: rotate(0.6deg);
+      outline: none;
+    }
+    input[type="text"]::placeholder { color: var(--hint); opacity: 1; }
+    input[type="text"]:focus-visible { box-shadow: 4px 4px 0 var(--ink), 0 0 0 4px var(--blue); }
+
+    .go {
+      width: 100%;
+      min-height: 64px;
+      padding: 12px 24px;
+      font: 700 24px var(--ui-font);
+      color: #fff;
+      background: var(--red);
+      border: 3px solid var(--ink);
+      border-radius: 999px;
+      box-shadow: 0 8px 0 var(--ink);
+      transform: rotate(-1deg);
+      cursor: pointer;
+      transition: transform 0.08s, box-shadow 0.08s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .go:active { transform: rotate(-1deg) translateY(6px); box-shadow: 0 2px 0 var(--ink); }
+    .go:focus-visible { outline: 4px solid var(--blue); outline-offset: 4px; }
+
+    .bubble {
+      position: relative;
+      margin-top: 8px;
+      min-height: 190px;
+      padding: 22px 20px;
+      background: var(--paper);
+      border: 3px solid var(--ink);
+      border-radius: 28px;
+      box-shadow: 6px 6px 0 var(--ink);
+      transform: rotate(-1.2deg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .mascot {
+      width: 118px;
+      height: auto;
+      display: block;
+    }
+
+    .message {
+      margin: 0;
+      font-size: 17px;
+      color: var(--ink-soft);
+      line-height: 1.4;
+    }
+
+    /* מצב התחלה */
+    .bubble[data-state="idle"] .mascot { animation: bob 2.4s ease-in-out infinite; }
+
+    /* מצב בדיחה */
+    .bubble[data-state="joke"] {
+      align-items: stretch;
+      justify-content: flex-start;
+      padding-top: 30px;
+    }
+    .bubble[data-state="joke"] .mascot {
+      position: absolute;
+      top: -40px;
+      right: -14px;
+      width: 86px;
+      transform: rotate(8deg);
+      animation: giggle 0.5s ease-in-out 4;
+    }
+    .bubble[data-state="joke"] .message {
+      font-family: var(--joke-font);
+      font-size: 25px;
+      line-height: 1.55;
+      color: var(--ink);
+      text-align: start;
+      overflow-wrap: anywhere;
+    }
+
+    .footer {
+      margin-top: auto;
+      padding-top: 18px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--ink-soft);
+    }
+
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    @keyframes giggle {
+      0%, 100% { transform: rotate(8deg); }
+      25% { transform: rotate(-6deg); }
+      75% { transform: rotate(18deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1 style="margin:0">
+      <img class="logo" src="assets/logo.svg" alt="בדיחה בלחיצה" width="300" height="158">
+    </h1>
+
+    <p class="intro">כותבים נושא, לוחצים, וצוחקים.<br>בלי נושא, מקבלים בדיחה כללית.</p>
+
+    <form id="joke-form">
+      <div class="field">
+        <label for="topic">על מה הבדיחה?</label>
+        <input id="topic" name="topic" type="text" maxlength="100" placeholder="למשל: חתולים" autocomplete="off">
+      </div>
+      <button class="go" id="go" type="submit">תנו לי בדיחה!</button>
+    </form>
+
+    <section class="bubble" id="bubble" data-state="idle" aria-live="polite">
+      <img class="mascot" id="mascot" src="assets/mascot-idle.svg" alt="הכפתור מחייך ומחכה" width="118" height="110">
+      <p class="message" id="message">לוחצים על הכפתור, והבדיחה מופיעה כאן</p>
+    </section>
+
+    <footer class="footer">מיישם AI ואוטומציה · 53500</footer>
+  </main>
+
+  <script>
+    const form = document.getElementById("joke-form");
+    const input = document.getElementById("topic");
+    const button = document.getElementById("go");
+    const bubble = document.getElementById("bubble");
+    const mascot = document.getElementById("mascot");
+    const message = document.getElementById("message");
+
+    function showJoke(text) {
+      bubble.dataset.state = "joke";
+      mascot.src = "assets/mascot-joke.svg";
+      mascot.alt = "הכפתור צוחק";
+      message.textContent = text;
+      button.textContent = "עוד בדיחה!";
+      // מפעיל מחדש את הגלגול מצחוק בכל בדיחה
+      mascot.style.animation = "none";
+      void mascot.offsetWidth;
+      mascot.style.animation = "";
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const topic = input.value.trim().slice(0, 100);
+      button.disabled = true;
+      try {
+        const response = await fetch("/api/joke", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic }),
+        });
+        const data = await response.json();
+        showJoke(data.joke || data.error || "משהו השתבש. נסו שוב.");
+      } catch (error) {
+        console.error(error);
+        showJoke("משהו השתבש. נסו שוב.");
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
