@@ -17,6 +17,8 @@
       --red: #F23D2F;
       --blue: #2E9BFF;
       --hint: #756B92;
+      --error: #C0261B;
+      --error-bg: #FFE8EC;
       --ui-font: "Fredoka", system-ui, sans-serif;
       --joke-font: "Playpen Sans Hebrew", "Fredoka", system-ui, sans-serif;
     }
@@ -105,7 +107,9 @@
       transition: transform 0.08s, box-shadow 0.08s;
       -webkit-tap-highlight-color: transparent;
     }
-    .go:active { transform: rotate(-1deg) translateY(6px); box-shadow: 0 2px 0 var(--ink); }
+    .go:active,
+    .go:disabled { transform: rotate(-1deg) translateY(6px); box-shadow: 0 2px 0 var(--ink); }
+    .go:disabled { cursor: wait; }
     .go:focus-visible { outline: 4px solid var(--blue); outline-offset: 4px; }
 
     .bubble {
@@ -142,6 +146,14 @@
     /* מצב התחלה */
     .bubble[data-state="idle"] .mascot { animation: bob 2.4s ease-in-out infinite; }
 
+    /* מצב טעינה */
+    .bubble[data-state="think"] .mascot { animation: squish 0.5s ease-in-out infinite; }
+
+    /* מצב שגיאה */
+    .bubble[data-state="error"] { background: var(--error-bg); }
+    .bubble[data-state="error"] .mascot { animation: wobble 0.6s ease-in-out 2; }
+    .bubble[data-state="error"] .message { color: var(--error); font-weight: 600; }
+
     /* מצב בדיחה */
     .bubble[data-state="joke"] {
       align-items: stretch;
@@ -176,6 +188,15 @@
     @keyframes bob {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-5px); }
+    }
+    @keyframes squish {
+      0%, 100% { transform: scale(1, 1); }
+      50% { transform: scale(1.08, 0.86); }
+    }
+    @keyframes wobble {
+      0%, 100% { transform: rotate(0); }
+      25% { transform: rotate(-10deg); }
+      75% { transform: rotate(10deg); }
     }
     @keyframes giggle {
       0%, 100% { transform: rotate(8deg); }
@@ -220,13 +241,23 @@
     const mascot = document.getElementById("mascot");
     const message = document.getElementById("message");
 
-    function showJoke(text) {
-      bubble.dataset.state = "joke";
-      mascot.src = "assets/mascot-joke.svg";
-      mascot.alt = "הכפתור צוחק";
+    const FALLBACK_ERROR = "משהו השתבש. נסו שוב.";
+
+    const STATES = {
+      think: { src: "assets/mascot-think.svg", alt: "הכפתור חושב", button: "חושב..." },
+      joke: { src: "assets/mascot-joke.svg", alt: "הכפתור צוחק", button: "עוד בדיחה!" },
+      error: { src: "assets/mascot-error.svg", alt: "הכפתור מסוחרר", button: "לנסות שוב" },
+    };
+
+    function setState(state, text) {
+      const s = STATES[state];
+      bubble.dataset.state = state;
+      mascot.src = s.src;
+      mascot.alt = s.alt;
       message.textContent = text;
-      button.textContent = "עוד בדיחה!";
-      // מפעיל מחדש את הגלגול מצחוק בכל בדיחה
+      button.textContent = s.button;
+      button.disabled = state === "think";
+      // מפעיל מחדש את התנועה בכל החלפת מצב
       mascot.style.animation = "none";
       void mascot.offsetWidth;
       mascot.style.animation = "";
@@ -234,21 +265,25 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (button.disabled) return;
       const topic = input.value.trim().slice(0, 100);
-      button.disabled = true;
+      setState("think", topic ? `מחפש בדיחה על ${topic}...` : "מחפש בדיחה...");
       try {
         const response = await fetch("/api/joke", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ topic }),
         });
-        const data = await response.json();
-        showJoke(data.joke || data.error || "משהו השתבש. נסו שוב.");
+        let data = {};
+        try { data = await response.json(); } catch { /* תשובה שאינה JSON */ }
+        if (response.ok && data.joke) {
+          setState("joke", data.joke);
+        } else {
+          setState("error", data.error || FALLBACK_ERROR);
+        }
       } catch (error) {
         console.error(error);
-        showJoke("משהו השתבש. נסו שוב.");
-      } finally {
-        button.disabled = false;
+        setState("error", FALLBACK_ERROR);
       }
     });
   </script>
