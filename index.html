@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>בדיחה בלחיצה</title>
   <meta name="description" content="כותבים נושא, לוחצים, וצוחקים.">
+  <meta name="theme-color" content="#FFE15A">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Playpen+Sans+Hebrew:wght@500&display=swap" rel="stylesheet">
@@ -286,6 +290,13 @@
         setState("error", FALLBACK_ERROR);
       }
     });
+
+    // רישום ה-service worker, להתקנה בטלפון
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch((error) => console.error(error));
+      });
+    }
   </script>
 </body>
 </html>
