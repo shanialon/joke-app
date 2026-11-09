@@ -181,6 +181,41 @@
       overflow-wrap: anywhere;
     }
 
+    /* כפתור "צחקתי" */
+    .laugh {
+      display: none;
+      align-self: center;
+      min-height: 48px;
+      padding: 8px 22px;
+      font: 700 19px var(--ui-font);
+      color: var(--ink);
+      background: var(--sun);
+      border: 3px solid var(--ink);
+      border-radius: 999px;
+      box-shadow: 0 5px 0 var(--ink);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bubble[data-state="joke"] .laugh[data-visible="true"] { display: inline-block; margin-top: 6px; }
+    .laugh:active,
+    .laugh:disabled { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+    .laugh:disabled { cursor: default; }
+    .laugh:focus-visible { outline: 4px solid var(--blue); outline-offset: 4px; }
+
+    /* "הכי מצחיקות" */
+    .top {
+      background: var(--paper);
+      border: 3px solid var(--ink);
+      border-radius: 24px;
+      box-shadow: 5px 5px 0 var(--ink);
+      padding: 16px 18px;
+    }
+    .top h2 { margin: 0 0 8px; font-size: 20px; }
+    .top ol { margin: 0; padding-inline-start: 24px; display: flex; flex-direction: column; gap: 10px; }
+    .top li { font-family: var(--joke-font); font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+    .top .count { font-family: var(--ui-font); font-weight: 700; color: var(--red); white-space: nowrap; }
+    .top .empty { margin: 0; font-size: 15px; color: var(--ink-soft); }
+
     .footer {
       margin-top: auto;
       padding-top: 18px;
@@ -232,6 +267,13 @@
     <section class="bubble" id="bubble" data-state="idle" aria-live="polite">
       <img class="mascot" id="mascot" src="assets/mascot-idle.svg" alt="הכפתור מחייך ומחכה" width="118" height="110">
       <p class="message" id="message">לוחצים על הכפתור, והבדיחה מופיעה כאן</p>
+      <button class="laugh" id="laugh" type="button">צחקתי</button>
+    </section>
+
+    <section class="top" aria-labelledby="top-title">
+      <h2 id="top-title">הכי מצחיקות</h2>
+      <p class="empty" id="top-empty">עוד אין בדיחות מצחיקות. תהיו הראשונים לצחוק!</p>
+      <ol id="top-list" hidden></ol>
     </section>
 
     <footer class="footer">מיישם AI ואוטומציה · 53500</footer>
@@ -267,10 +309,69 @@
       mascot.style.animation = "";
     }
 
+    const laughButton = document.getElementById("laugh");
+    const topList = document.getElementById("top-list");
+    const topEmpty = document.getElementById("top-empty");
+    let currentId = null;
+
+    function showLaugh(id) {
+      currentId = id || null;
+      laughButton.dataset.visible = id ? "true" : "false";
+      laughButton.disabled = false;
+      laughButton.textContent = "צחקתי";
+    }
+
+    // "הכי מצחיקות": נטענת בטעינת הדף ואחרי כל צחוק. הצגה עם textContent בלבד.
+    async function loadTop() {
+      try {
+        const response = await fetch("/api/top");
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data.top)) return;
+        topList.replaceChildren();
+        for (const item of data.top) {
+          const li = document.createElement("li");
+          const count = document.createElement("span");
+          count.className = "count";
+          count.textContent = `(${item.laughs}) `;
+          li.append(count, document.createTextNode(String(item.text)));
+          topList.append(li);
+        }
+        topList.hidden = data.top.length === 0;
+        topEmpty.hidden = data.top.length > 0;
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    laughButton.addEventListener("click", async () => {
+      if (laughButton.disabled || !currentId) return;
+      laughButton.disabled = true; // ננעל אחרי לחיצה
+      try {
+        const response = await fetch("/api/laugh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: currentId }),
+        });
+        const data = await response.json();
+        if (response.ok && typeof data.laughs === "number") {
+          laughButton.textContent = `צחקתי · ${data.laughs}`;
+          loadTop();
+        } else {
+          laughButton.disabled = false;
+        }
+      } catch (error) {
+        console.error(error);
+        laughButton.disabled = false;
+      }
+    });
+
+    loadTop();
+
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (button.disabled) return;
       const topic = input.value.trim().slice(0, 100);
+      showLaugh(null);
       setState("think", topic ? `מחפש בדיחה על ${topic}...` : "מחפש בדיחה...");
       try {
         const response = await fetch("/api/joke", {
@@ -282,6 +383,7 @@
         try { data = await response.json(); } catch { /* תשובה שאינה JSON */ }
         if (response.ok && data.joke) {
           setState("joke", data.joke);
+          showLaugh(data.id);
         } else {
           setState("error", data.error || FALLBACK_ERROR);
         }

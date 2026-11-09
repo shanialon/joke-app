@@ -4,7 +4,8 @@
 - אפליקציית "בדיחה בלחיצה": כותבים נושא, מקבלים בדיחה בעברית מ-GPT-5 דרך פונקציה ב-Vercel.
 - מסמכי האפיון ב-`spec/`: PRD, MVP, ARCHITECTURE, DESIGN, MILESTONES, tech-stack, product-10-definitions, ומסמך הקורס course-stack.md. תמונות הייחוס (wireframes, mockups, style-guide) גם שם.
 - `assets/` נשארת בשורש, כי האפליקציה משתמשת בה. משתמשים בקבצים כמו שהם, בלי לצייר מחדש.
-- הסטאק לפי `spec/course-stack.md`: HTML, CSS ו-JavaScript בלי framework ובלי build, ופונקציה אחת ב-`api/joke.js`. אין לחרוג מהסטאק בלי לשאול קודם.
+- הסטאק לפי `spec/course-stack.md`: HTML, CSS ו-JavaScript בלי framework ובלי build, ופונקציות בתיקיית `api/`. אין לחרוג מהסטאק בלי לשאול קודם.
+- שמירה: Supabase. רק הפונקציות בתיקיית `api/` מדברות איתו, דרך לקוח אחד ב-`lib/supabase.js` (החבילה `@supabase/supabase-js`). הדף מדבר רק עם `/api`, ואין בו כתובת או מפתח של Supabase.
 
 ## שפה
 - האפליקציה בעברית, מימין לשמאל (`lang="he"`, `dir="rtl"`).
@@ -17,8 +18,8 @@
 ## מפתחות: חוק ברזל
 - לא לבקש ממני אף מפתח.
 - לא לכתוב ולא לקרוא מפתח בשום קובץ. `.env` ו-`.env.*` חסומים לקריאה ב-`.claude/settings.json`.
-- מפתח ה-production שמור אצלי ב-Vercel (Secret, ב-Production וב-Preview). את מפתח ה-dev אני מדביקה בעצמי ב-`.env.local`.
-- `.env.example` מכיל רק את השורה `OPENAI_API_KEY=`, בלי ערך ובלי הערות.
+- מפתח ה-production של OpenAI ו-`SUPABASE_SECRET_KEY` שמורים אצלי ב-Vercel (Secret, ב-Production וב-Preview). את המפתחות המקומיים אני מדביקה בעצמי ב-`.env.local`.
+- `.env.example` מכיל רק את השורות `OPENAI_API_KEY=` ו-`SUPABASE_SECRET_KEY=`, בלי ערכים ובלי הערות.
 - `.gitignore` מתעלם מ-`.env`, מ-`.env.*` (חוץ מ-`!.env.example`), מ-`.vercel` ומ-`node_modules`.
 
 ## Git ו-GitHub
@@ -41,7 +42,7 @@
 - בסוף כל Milestone עוצרים ומחכים לבדיקה ולאישור מפורש שלי לפני שממשיכים.
 
 ## בחירת מודל
-- הקמה: Sonnet. ‏Milestone 1 (המסך והעיצוב): Opus. ‏Milestone 2 ו-3: Sonnet, ועוברים ל-Opus אם נתקעים.
+- הקמה: Sonnet. ‏Milestone 1 (המסך והעיצוב): Opus. ‏Milestone 2, 3 ו-4: Sonnet, ועוברים ל-Opus אם נתקעים.
 
 ## החלטות פתוחות שנקבעו כברירת מחדל
 - מודל שמסרב לנושא: מציגים את מה שהוא החזיר.

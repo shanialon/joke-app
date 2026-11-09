@@ -1,5 +1,7 @@
 // Milestone 2: בדיחה מ-OpenAI דרך Responses API.
 // המפתח נקרא רק כאן, בשרת, ואף פעם לא חוזר לדף.
+// Milestone 4: כל בדיחה נשמרת ב-Supabase, וה-id שלה חוזר לדף.
+import { getSupabase } from "../lib/supabase.js";
 
 const OPENAI_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-5.6-sol"; // המחליף הרשמי של gpt-5, שנכבה ב-11.12.2026
@@ -113,6 +115,18 @@ export default {
       return json({ error: "הבדיחה לא הגיעה. נסו שוב." }, 502);
     }
 
-    return json({ joke });
+    // שמירה בטבלה. אם נכשלה, הבדיחה עדיין חוזרת, בלי id.
+    try {
+      const { data: row, error } = await getSupabase()
+        .from("jokes")
+        .insert({ topic: topic || null, text: joke })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return json({ joke, id: row.id });
+    } catch (error) {
+      console.error("saving joke failed:", error?.code, error?.message);
+      return json({ joke });
+    }
   },
 };

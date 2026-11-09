@@ -1,7 +1,7 @@
 # MILESTONES: בדיחה בלחיצה
 כלל: בסוף כל Milestone ה-AI עוצר, וממתין לבדיקה ולאישור מפורש שלי לפני שהוא ממשיך.
 
-שלושה Milestones, כשעתיים בסך הכל. את המפתחות של OpenAI אף פעם לא נותנים ל-Claude: מפתח ה-production עובר ישר מ-OpenAI ל-Vercel, ומפתח ה-dev מודבק ביד ב-.env.local.
+ארבעה Milestones. את המפתחות של OpenAI ושל Supabase אף פעם לא נותנים ל-Claude: מפתח ה-production עובר ישר מ-OpenAI ל-Vercel, ומפתח ה-dev מודבק ביד ב-.env.local.
 
 איפה מריצים: הבחירה שלי. אפשר לבדוק כל Milestone בכתובת של Vercel אחרי push, ואפשר גם להריץ במחשב עם vercel dev. הקוד זהה בשני המקרים.
 
@@ -69,3 +69,50 @@
   3. בתוך האפליקציה המותקנת מגיעה בדיחה חדשה בכל לחיצה.
   4. ב-Application ואז Cache Storage אין אף כתובת של /api.
   5. שינוי קטן בטקסט, push, ורענון: השינוי מופיע.
+
+## Milestone 4: האפליקציה זוכרת
+- המטרה: כל בדיחת AI נשמרת ב-Supabase. אפשר לסמן "צחקתי", ורואים את חמש הבדיחות הכי מצחיקות. הדף מדבר רק עם /api, ורק הפונקציות בתיקיית api מדברות עם Supabase.
+- מה רואים בדף:
+  - מתחת לכל בדיחת AI: כפתור "צחקתי" עם מונה. אחרי לחיצה הכפתור ננעל.
+  - רשימת "הכי מצחיקות": חמש הבדיחות עם הכי הרבה צחוקים, רק כאלה עם צחוק אחד לפחות. היא מתעדכנת אחרי כל צחוק, בלי polling.
+- הטבלה, דרך המחבר של Supabase:
+  - אם יש יותר מפרויקט אחד ב-Supabase, Claude שואל באיזה לעבוד.
+  - migration בשם `create_jokes`, עם הטבלה `public.jokes` וחמש עמודות:
+    - `id` מסוג uuid, מפתח ראשי, ברירת מחדל `gen_random_uuid()`.
+    - `created_at` מסוג timestamptz, ברירת מחדל `now()`.
+    - `topic` מסוג text.
+    - `text` מסוג text, חובה.
+    - `laughs` מסוג integer, חובה, ברירת מחדל 0.
+- הנעילה, כדי שרק השרת ייגש לטבלה:
+  - RLS מופעל, בלי אף policy.
+  - `grant select, insert, update` על הטבלה ל-`service_role` בלבד.
+  - `revoke all` מ-`anon` ומ-`authenticated`.
+- ספירת הצחוקים, כדי ששתי לחיצות באותו רגע לא ידרסו זו את זו:
+  - פונקציה `public.add_laugh(joke_id uuid)`: מוסיפה 1 למונה ומחזירה את המספר החדש.
+  - בתוכה: `security invoker`, ‏`search_path` ריק, ושמות מלאים כמו `public.jokes`.
+  - הרשאות: `revoke execute` מ-`public`, ‏`anon` ו-`authenticated`, ו-`grant execute` ל-`service_role`.
+- עצירה ראשונה, סביב ה-SQL:
+  - ה-SQL נשמר גם בקובץ `db/create_jokes.sql`, ו-Claude מציג אותו לפני ההרצה.
+  - אחרי ההרצה Claude מריץ `get_advisors`, מסביר בעברית מה נמצא, ועוצר. אני בודקת שהטבלה נעולה.
+- הקוד בשרת:
+  - לקוח אחד בקובץ `lib/supabase.js`, מהחבילה `@supabase/supabase-js` ב-dependencies. הכתובת מ-`process.env.SUPABASE_URL`, והמפתח מ-`process.env.SUPABASE_SECRET_KEY`.
+  - api/joke.js שומרת כל בדיחת AI בטבלה ומחזירה גם את ה-id שלה: `{ "joke": "...", "id": "..." }`. אם השמירה נכשלת, הבדיחה עדיין מגיעה למשתמש, והשגיאה נרשמת ב-console.error.
+  - api/laugh.js: מקבלת POST עם `{ "id": "..." }`, בודקת שזה uuid, וקוראת ל-`add_laugh` דרך rpc. מחזירה את המונה החדש.
+  - api/top.js: מחזירה את רשימת "הכי מצחיקות".
+  - גרסת ה-service worker עולה, כדי שהדף החדש ייטען. /api עדיין לא נשמר במטמון.
+- ביד, לפני הדחיפה:
+  - ב-Vercel, ב-Environment Variables: `SUPABASE_URL` ו-`SUPABASE_SECRET_KEY` (הסוג Secret), ב-Production וב-Preview. את המפתח הסודי אני שמה בעצמי. Claude לא מבקש אותו.
+  - מי שמריץ מקומית: מדביקה את המפתח ב-.env.local, ביד.
+- עצירה שנייה: Claude עוצר לפני הדחיפה, עד שהמשתנים שמורים ב-Vercel.
+- התוצר המצופה: צוחקים על בדיחה, והיא עולה לרשימת "הכי מצחיקות".
+- תנאי השלמה (Definition of Done):
+  1. כל בדיחת AI נשמרת שורה בטבלה `public.jokes`, עם הנושא והטקסט.
+  2. מתחת לבדיחה יש כפתור "צחקתי" עם מונה. לחיצה מעלה את המונה ב-1, והכפתור ננעל.
+  3. רשימת "הכי מצחיקות" מציגה עד חמש בדיחות עם צחוק אחד לפחות, מהכי הרבה צחוקים, ומתעדכנת אחרי כל צחוק בלי polling.
+  4. `get_advisors` לא מתריע על הטבלה או על הפונקציה, ו-Claude הסביר בעברית מה נמצא.
+  5. בלשונית Network יש בקשות רק ל-/api/joke, ‏/api/laugh ו-/api/top. אין אף בקשה ל-supabase.co.
+  6. חיפוש בקוד הדף (Ctrl+U ואז Ctrl+F) על `supabase` ועל `sb_secret` לא מוצא כלום.
+  7. פנייה ישירה לטבלה עם המפתח הציבורי (anon) נדחית.
+  8. כש-Supabase לא זמין, הבדיחה עדיין מגיעה, וב-Logs יש שורה אדומה.
+  9. /api/laugh עם id שאינו uuid מחזיר שגיאה, בלי לפנות ל-Supabase.
+  10. בריפו: .env.example עם השורות `OPENAI_API_KEY=` ו-`SUPABASE_SECRET_KEY=` בלבד, בלי ערכים.
