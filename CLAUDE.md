@@ -5,7 +5,14 @@
 - מסמכי האפיון ב-`spec/`: PRD, MVP, ARCHITECTURE, DESIGN, MILESTONES, tech-stack, product-10-definitions, ומסמך הקורס course-stack.md. תמונות הייחוס (wireframes, mockups, style-guide) גם שם.
 - `assets/` נשארת בשורש, כי האפליקציה משתמשת בה. משתמשים בקבצים כמו שהם, בלי לצייר מחדש.
 - הסטאק לפי `spec/course-stack.md`: HTML, CSS ו-JavaScript בלי framework ובלי build, ופונקציות בתיקיית `api/`. אין לחרוג מהסטאק בלי לשאול קודם.
-- שמירה: Supabase. רק הפונקציות בתיקיית `api/` מדברות איתו, דרך לקוח אחד ב-`lib/supabase.js` (החבילה `@supabase/supabase-js`). הדף מדבר רק עם `/api`, ואין בו כתובת או מפתח של Supabase.
+- מסמך ההרחבה `spec/milestones-5-6.md`: המקור של Milestone 5, ‏Milestone 6 והבונוס של Google.
+- שמירה: Supabase. רק הפונקציות בתיקיית `api/` מדברות איתו על נתונים, דרך לקוח אחד ב-`lib/supabase.js` (החבילה `@supabase/supabase-js`). הדף מדבר רק עם `/api`, ולא קורא ולא כותב אף טבלה. אין בקוד הדף כתובת או מפתח של Supabase.
+
+## כניסה: Supabase Auth (מ-Milestone 5)
+- רמה 3 לפי `spec/course-stack.md`: משתמשים אמיתיים עם הרשמה עצמית, ב-Supabase Auth.
+- בדפדפן, הספרייה של Supabase משמשת רק לכניסה (`/auth/v1`), דרך `auth.js`. הכתובת והמפתח הציבורי מגיעים מ-`/api/config`. אין אף בקשה מהדפדפן ל-`/rest/v1`.
+- הטוקן נשלח לפונקציות בכותרת `Authorization: Bearer <token>`.
+- הפונקציות מזהות משתמש רק עם `supabase.auth.getUser(token)`. מזהה משתמש או שם שמגיעים מהדף, לא נחשבים.
 
 ## שפה
 - האפליקציה בעברית, מימין לשמאל (`lang="he"`, `dir="rtl"`).
@@ -19,6 +26,8 @@
 - לא לבקש ממני אף מפתח.
 - לא לכתוב ולא לקרוא מפתח בשום קובץ. `.env` ו-`.env.*` חסומים לקריאה ב-`.claude/settings.json`.
 - מפתח ה-production של OpenAI ו-`SUPABASE_SECRET_KEY` שמורים אצלי ב-Vercel (Secret, ב-Production וב-Preview). את המפתחות המקומיים אני מדביקה בעצמי ב-`.env.local`.
+- `SUPABASE_PUBLISHABLE_KEY` שמור ב-Vercel מסוג Config, בכל הסביבות. הוא לא סוד: Claude יכול להביא אותו דרך המחבר של Supabase, עם `get_publishable_keys`. רק `api/config.js` מחזיר אותו לדף, ואף פעם לא מפתח סודי.
+- ה-Client Secret של Google (בונוס) נשאר רק בדשבורד של Supabase: לא בקוד, לא בריפו ולא ב-Vercel.
 - `.env.example` מכיל רק את השורות `OPENAI_API_KEY=` ו-`SUPABASE_SECRET_KEY=`, בלי ערכים ובלי הערות.
 - `.gitignore` מתעלם מ-`.env`, מ-`.env.*` (חוץ מ-`!.env.example`), מ-`.vercel` ומ-`node_modules`.
 
