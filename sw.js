@@ -1,5 +1,5 @@
 // service worker: קודם רשת, ומהמטמון רק כשאין רשת. בקשות ל-/api לא נשמרות אף פעם.
-const CACHE = "joke-v3";
+const CACHE = "joke-v4";
 
 const PRECACHE = [
   "/",
