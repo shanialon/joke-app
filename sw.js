@@ -1,9 +1,10 @@
 // service worker: קודם רשת, ומהמטמון רק כשאין רשת. בקשות ל-/api לא נשמרות אף פעם.
-const CACHE = "joke-v2";
+const CACHE = "joke-v3";
 
 const PRECACHE = [
   "/",
   "/manifest.webmanifest",
+  "/auth.js",
   "/assets/logo.svg",
   "/assets/mascot-idle.svg",
   "/assets/mascot-think.svg",

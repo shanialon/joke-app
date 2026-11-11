@@ -1,7 +1,9 @@
 // Milestone 2: בדיחה מ-OpenAI דרך Responses API.
 // המפתח נקרא רק כאן, בשרת, ואף פעם לא חוזר לדף.
 // Milestone 4: כל בדיחה נשמרת ב-Supabase, וה-id שלה חוזר לדף.
-import { getSupabase } from "../lib/supabase.js";
+// Milestone 5: משתמש מחובר מזוהה לפי הטוקן, והבדיחה נשמרת עם השם שלו.
+import { json, authRequired, readBody } from "../lib/http.js";
+import { getSupabase, hasToken, getUserFromRequest, displayName } from "../lib/supabase.js";
 
 const OPENAI_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-5.6-sol"; // המחליף הרשמי של gpt-5, שנכבה ב-11.12.2026
@@ -10,13 +12,6 @@ const INSTRUCTIONS =
   "אתה כותב בדיחות קצרות בעברית. כתוב בדיחה אחת בלבד, עד ארבעה משפטים, נקייה ומתאימה לכל גיל. בלי הקדמה, בלי הסבר ובלי אימוג׳י. רק הבדיחה.";
 
 const GENERAL_INPUT = "אין נושא. ספר בדיחה כללית על החיים.";
-
-function json(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json; charset=utf-8" },
-  });
-}
 
 // הטקסט מהתשובה: output_text אם קיים, אחרת החלקים מסוג output_text בפריטי message.
 function extractText(data) {
@@ -53,14 +48,25 @@ export default {
     }
 
     let topic = "";
-    try {
-      const body = await request.json();
-      if (body && typeof body.topic === "string") {
-        topic = body.topic.trim().slice(0, 100);
-      }
-    } catch {
-      // גוף שבור נחשב "אין נושא"
+    const body = await readBody(request); // גוף שבור נחשב "אין נושא"
+    if (typeof body.topic === "string") {
+      topic = body.topic.trim().slice(0, 100);
     }
+
+    // מי שואל, לפני הפנייה ל-OpenAI. טוקן לא מוכר: 401, בלי בדיחה.
+    // Supabase לא זמין: הבדיחה בכל זאת מגיעה, בלי שמירה.
+    let user = null;
+    let canSave = true;
+    if (hasToken(request)) {
+      try {
+        user = await getUserFromRequest(request, getSupabase());
+      } catch (error) {
+        console.error("auth check failed:", error?.message);
+        canSave = false;
+      }
+      if (canSave && !user) return authRequired();
+    }
+    const authorName = user ? displayName(user) : null;
 
     const apiKey = process.env.OPENAI_API_KEY;
     const model = process.env.OPENAI_MODEL || DEFAULT_MODEL;
@@ -115,18 +121,25 @@ export default {
       return json({ error: "הבדיחה לא הגיעה. נסו שוב." }, 502);
     }
 
+    if (!canSave) return json({ joke, author_name: authorName });
+
     // שמירה בטבלה. אם נכשלה, הבדיחה עדיין חוזרת, בלי id.
     try {
       const { data: row, error } = await getSupabase()
         .from("jokes")
-        .insert({ topic: topic || null, text: joke })
+        .insert({
+          topic: topic || null,
+          text: joke,
+          user_id: user ? user.id : null,
+          author_name: authorName,
+        })
         .select("id")
         .single();
       if (error) throw error;
-      return json({ joke, id: row.id });
+      return json({ joke, id: row.id, author_name: authorName });
     } catch (error) {
       console.error("saving joke failed:", error?.code, error?.message);
-      return json({ joke });
+      return json({ joke, author_name: authorName });
     }
   },
 };
