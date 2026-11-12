@@ -7,6 +7,31 @@ window.Auth = (() => {
   const listeners = new Set();
 
   const NOT_READY = "הכניסה לא זמינה כרגע. נסו שוב עוד רגע.";
+  let config = null; // { url, publishableKey } מ-/api/config
+
+  // בונוס Google: האם חזרנו עכשיו מ-Google? נקרא לפני שהספרייה נוגעת בכתובת.
+  const OAUTH_PARAMS = ["code", "error", "error_code", "error_description", "state", "sb"];
+  const returnParams = (() => {
+    const params = new URLSearchParams(location.search);
+    const hash = new URLSearchParams(location.hash.slice(1));
+    const pick = (key) => params.get(key) || hash.get(key) || "";
+    return {
+      code: params.get("code") || "",
+      error: pick("error"),
+      errorCode: pick("error_code"),
+      errorDescription: pick("error_description"),
+    };
+  })();
+  const returning = Boolean(returnParams.code || returnParams.error || returnParams.errorCode || returnParams.errorDescription);
+  let oauthResult = null; // { status: "ok" | "cancelled" | "failed", message }
+
+  // מנקה מהכתובת את מה ש-Google ו-Supabase הוסיפו. הלשונית (#joke וכו') נשארת.
+  function cleanUrl() {
+    const url = new URL(location.href);
+    for (const key of OAUTH_PARAMS) url.searchParams.delete(key);
+    if (/(^|[#&])(error|error_code|error_description|access_token)=/.test(url.hash)) url.hash = "";
+    history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+  }
 
   // הודעות שגיאה בעברית, לפי הקוד שחוזר מ-Supabase Auth.
   function hebrew(error) {
@@ -46,10 +71,11 @@ window.Auth = (() => {
     try {
       if (!window.supabase?.createClient) throw new Error("supabase-js not loaded");
       const response = await fetch("/api/config", { cache: "no-store" });
-      const config = await response.json();
-      if (!response.ok || !config.url || !config.publishableKey) {
-        throw new Error(config.code || "auth config missing");
+      const loaded = await response.json();
+      if (!response.ok || !loaded.url || !loaded.publishableKey) {
+        throw new Error(loaded.code || "auth config missing");
       }
+      config = loaded;
       client = window.supabase.createClient(config.url, config.publishableKey, {
         auth: {
           flowType: "pkce",
@@ -68,6 +94,18 @@ window.Auth = (() => {
     } catch (error) {
       console.error("auth not available:", error?.message);
       client = null;
+    }
+    if (returning) {
+      if (current) {
+        oauthResult = { status: "ok", message: "" };
+      } else {
+        const text = `${returnParams.error} ${returnParams.errorCode} ${returnParams.errorDescription}`.toLowerCase();
+        const cancelled = text.includes("access_denied") || text.includes("cancel") || text.includes("denied");
+        oauthResult = cancelled
+          ? { status: "cancelled", message: "הכניסה עם Google בוטלה." }
+          : { status: "failed", message: "הכניסה עם Google לא הצליחה. נסו שוב." };
+      }
+      cleanUrl();
     }
     return current;
   })();
@@ -122,6 +160,36 @@ window.Auth = (() => {
     emit();
   }
 
+  // בונוס Google: קודם בודקים ש-Google דולק ב-Supabase, ורק אז יוצאים לדף של Google.
+  // הדף לא חוזר מכאן: הדפדפן עובר ל-Google. כשיש בעיה, נזרקת שגיאה בעברית.
+  async function google() {
+    await need();
+    let enabled = false;
+    try {
+      const response = await fetch(`${config.url}/auth/v1/settings`, {
+        headers: { apikey: config.publishableKey },
+        cache: "no-store",
+      });
+      const settings = await response.json();
+      enabled = response.ok && settings?.external?.google === true;
+    } catch (error) {
+      throw new Error(hebrew(error));
+    }
+    if (!enabled) throw new Error("הכניסה עם Google עוד לא מוגדרת.");
+    const { error } = await client.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${location.origin}/` },
+    });
+    if (error) throw new Error(hebrew(error));
+  }
+
+  // אחרי ready: מה קרה בחזרה מ-Google, או null כשלא חזרנו משם. נקרא פעם אחת.
+  function takeOAuthResult() {
+    const result = oauthResult;
+    oauthResult = null;
+    return result;
+  }
+
   function session() {
     return current;
   }
@@ -140,5 +208,5 @@ window.Auth = (() => {
     return () => listeners.delete(fn);
   }
 
-  return { ready, signUp, signIn, signOut, session, token, onChange };
+  return { ready, returning, signUp, signIn, google, takeOAuthResult, signOut, session, token, onChange };
 })();

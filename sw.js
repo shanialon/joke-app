@@ -1,5 +1,5 @@
 // service worker: קודם רשת, ומהמטמון רק כשאין רשת. בקשות ל-/api לא נשמרות אף פעם.
-const CACHE = "joke-v4";
+const CACHE = "joke-v5";
 
 const PRECACHE = [
   "/",
@@ -44,7 +44,8 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response.ok) {
+        // חזרה מ-Google (/?code=...): לא שומרים כתובת עם פרמטרים
+        if (response.ok && !url.search) {
           const copy = response.clone();
           caches.open(CACHE).then((cache) => cache.put(request, copy));
         }
